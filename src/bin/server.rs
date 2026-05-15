@@ -1,4 +1,4 @@
-use serve::protocol::Response;
+use serve::protocol::{Request, Response};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 
@@ -21,20 +21,39 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                     Ok(n) => {
                         // Convert request to string
-                        let request = String::from_utf8_lossy(&buf[0..n]);
-
-                        println!("Incoming Request:\n{}", request);
+                        let raw_request = String::from_utf8_lossy(&buf[0..n]);
+                        let request = Request::from_raw(&raw_request);
+                        println!("Incoming Request:\n{:#?}", request);
 
                         // Response object
-                        let response = Response {
-                            status: "200 OK".to_string(),
-                            headers: vec![
-                                ("Content-Type".to_string(), "text/plain".to_string()),
-                                ("Content-Length".to_string(), "11".to_string()),
-                            ],
-                            body: "Hello World".to_string(),
-                        };
+                        let response = match request.path.as_str() {
+                            "/" => Response {
+                                status: "200 OK".to_string(),
+                                headers: vec![(
+                                    "Content-Type".to_string(),
+                                    "text/plain".to_string(),
+                                )],
+                                body: "Welcome Home".to_string(),
+                            },
 
+                            "/hello" => Response {
+                                status: "200 OK".to_string(),
+                                headers: vec![(
+                                    "Content-Type".to_string(),
+                                    "text/plain".to_string(),
+                                )],
+                                body: "Hello Route".to_string(),
+                            },
+
+                            _ => Response {
+                                status: "404 Not Found".to_string(),
+                                headers: vec![(
+                                    "Content-Type".to_string(),
+                                    "text/plain".to_string(),
+                                )],
+                                body: "404 Route Not Found".to_string(),
+                            },
+                        };
                         // Convert struct into raw HTTP response
                         let http_response = response.to_http_response();
 
